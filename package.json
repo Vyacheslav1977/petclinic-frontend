@@ -1,0 +1,25 @@
+{
+  "name": "petclinic-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "server": {
+    "protocol": "http",
+    "host": "127.0.0.1",
+    "port": 8099
+  },
+  "apiPrefix": "/api/v1/",
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "bootstrap": "^5.2.0",
+    "bootstrap-vue": "^2.22.0",
+    "lodash.debounce": "^4.0.8",
+    "vue": "^2.6.11"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "~4.5.13",
+    "vue-template-compiler": "^2.6.11"
+  }
+}
