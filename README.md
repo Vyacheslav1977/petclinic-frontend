@@ -1,19 +1,30 @@
-# dl-front1
+# Проект "Клиника домашних животных" (в части front-end)
 
-## Project setup
+## Установка зависимостей
 ```
 npm install
 ```
 
-### Compiles and hot-reloads for development
+## Настройка параметров API-сервера (back-end)
+
+В файле package.json нужно всё задать в блоке "server". Например:
+```
+"server": {
+    "protocol": "http",
+    "host": "127.0.0.1",
+    "port": 8089
+}
+```
+
+## Запуск локальной dev-версии с горячей перезагрузкой
 ```
 npm run serve
 ```
+После выполнения в консоли будет указано по какому адресу доступна локальная версия сайта. Например, http://localhost:8080/
 
-### Compiles and minifies for production
+## Сборка production-версии
 ```
 npm run build
 ```
+После успешного выполнения, содержимое директории "dist" будет необходимо выложить на сервер (например, на хостинг).
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
