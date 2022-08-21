@@ -4,7 +4,7 @@
       <div class="row">
         <div class="btn-add-new p-2 col-8"><b-button v-b-modal.modal-pet-edit>Добавить нового питомца</b-button></div>
         <div class="p-2 col-4 search-area">
-          <input class="form-control" type="search" placeholder="Начните вводить текст для поиска..." aria-label="Search" v-model="searchValue" @input="quickSearch">
+          <input class="form-control" type="search" placeholder="Поиск: начните вводить текст..." aria-label="Search" v-model="searchValue" @input="quickSearch">
         </div>
       </div>
     </div>
@@ -16,7 +16,7 @@
       title="Питомец"
       @show="resetModal"
       @hidden="resetModal"
-      @ok="handleOk"
+      hide-footer
     >
       <form ref="form" @submit.stop.prevent="handleSubmit">
       <div v-if="id" class="mb-3">ID: <strong>{{ id }}</strong></div>
@@ -36,9 +36,12 @@
             v-model="name"
             :state="nameState"
             required
+            @keyup.enter="handleSubmit"
+            style="display: inline-block; margin-right: 8px; width: calc(100% - 120px);"
           ></b-form-input>
+          <b-button style="margin-top: -4px; width: 112px;" @click="handleSubmit">{{ id ? 'Изменить' : 'Сохранить' }}</b-button>
         </b-form-group>
-        <div class="mt-3">Владелец: {{ client ? client.name : 'не выбран' }}</div>
+        <div class="mt-3" style="display: inline-block; margin-right: 8px;">Владелец: {{ client ? client.name : id ? 'не выбран' : '[можно будет выбрать после сохранения]' }}</div>
         <b-button v-if="id" v-b-modal.modal-client-prevent-closing>{{ client ? 'Сменить' : 'Выбрать' }}</b-button>
 
         <div class="mt-2 btn-delete"><b-button v-if="id" class="btn btn-danger" @click="deletePet">Удалить питомца</b-button></div>
@@ -52,7 +55,12 @@
       @shown="loadClients"
   >
     <div class="d-block">
-      <p class="entity" v-for="client in clients" :key="client.id" @click="setClient(client)">{{ client.name + ' (id: ' + client.id + ')' }}</p>
+      <p class="entity" v-for="client in clients" :key="client.id">
+        <span :class="client.pet && client.pet.id===id ? 'selected' : ''" @click="setClient(client)">
+          <b>{{ client.name }}</b> (id: {{ client.id }})
+          [<i>{{ client.pet && client.pet.id ? client.pet.name : '*питомец не назначен*' }}</i>]
+        </span>
+      </p>
     </div>
     <template #modal-footer>
       <b-button class="mt-3" block @click="closeClientsWindow">Отмена</b-button>
@@ -70,8 +78,11 @@ const debounceDelayMs = 1000; // поиск на сервере начнётся
 
 export default {
   name: 'Pets',
+  props: {
+    savedSearchValue: String,
+  },
   data() {
-      window.pets = this;
+      //window.pets = this;
       return {
         api: null,
         id: null,
@@ -84,36 +95,59 @@ export default {
         searchValue: '',
       }
   },
+
     created() {
-      this.api = new Api();
+      this.api = new Api(this);
+      this.searchValue = this.savedSearchValue;
     },
+
     async mounted() {
       await this.loadPets();
     },
+
+    watch: {
+      searchValue(v) {
+        this.$emit('setSearchValue', v);
+      },
+    },
+
     methods: {
       setClient(client) {
-        this.client = client;
+        if (this.client === null || this.client.id !== client.id) {
+          this.client = client;
+          this.handleSubmit();
+        }
+        this.clients = [];
         this.closeClientsWindow();
       },
+
       closeClientsWindow() {
         this.$bvModal.hide('modal-client-prevent-closing');
       },
+
       quickSearch: debounce(async function() {
-        this.$parent.showSpinner();
+        if (!this.searchValue) {
+          this.loadPets();
+          return;
+        }
         this.pets = await this.api.pets.search({name: this.searchValue});
-        this.$parent.hideSpinner();
       }, debounceDelayMs),
+
       async loadPets() {
-        this.$parent.showSpinner();
+        if (this.searchValue) {
+          this.quickSearch();
+          return;
+        }
         this.pets = await this.api.pets.read();
-        this.$parent.hideSpinner();
       },
+
       hidePetsWindow() {
         this.$nextTick(() => {
           this.$bvModal.hide('modal-pet-edit');
           this.resetModal();
         });
       },
+
       rowClicked(row) {
         this.$nextTick(() => {
           this.$bvModal.show('modal-pet-edit');
@@ -122,52 +156,83 @@ export default {
           this.client = row.client;
         })
       },
+
       checkFormValidity() {
         const valid = this.$refs.form.checkValidity()
         this.nameState = valid
         return valid
       },
+
       resetModal() {
         this.nameState = null
         this.id = null;
         this.name = '';
         this.client = null;
       },
-      handleOk(bvModalEvent) {
-        bvModalEvent.preventDefault()
-        this.handleSubmit()
-      },
+
       async handleSubmit() {
         if (!this.checkFormValidity()) {
           return
         }
-
-        this.$parent.showSpinner();
-        if (this.id === null)
-          await this.api.pets.create({name: this.name});
-        else
+        if (this.id === null) {
+          const res = await this.api.pets.create({name: this.name});
+          if (res && res.id) {
+            this.$bvModal.msgBoxOk(`${res.name} (id: ${res.id})`, {
+              title: 'Новый питомец создан',
+              size: 'sm',
+              buttonSize: 'sm',
+              okVariant: 'success',
+              headerClass: 'p-2 border-bottom-0',
+              footerClass: 'p-2 border-top-0',
+              centered: true
+            });
+          }
+        }
+        else {
           await this.api.pets.update({id: this.id, name: this.name, client: this.client === null ? null : this.client.id});
-        this.$parent.hideSpinner();
+          this.$bvModal.msgBoxOk('Изменения сохранены', {
+            size: 'sm',
+            buttonSize: 'sm',
+            okVariant: 'success',
+            headerClass: 'p-2 border-bottom-0',
+            footerClass: 'p-2 border-top-0',
+            centered: true
+          });
+        }
         this.hidePetsWindow();
         await this.loadPets();
       },
+
       async deletePet() {
-        this.$parent.showSpinner();
-        await this.api.pets.delete(this.id);
-        this.$parent.hideSpinner();
-        this.hidePetsWindow();
-        await this.loadPets();
+        this.$bvModal.msgBoxConfirm(`Удалить питомца "${this.name}"?`, {
+          size: 'sm',
+          buttonSize: 'sm',
+          okVariant: 'danger',
+          okTitle: 'Удалить',
+          cancelTitle: 'Отмена',
+          centered: true
+        })
+        .then(async (value) => {
+          if (value) {
+            await this.api.pets.delete(this.id);
+            this.hidePetsWindow();
+            await this.loadPets();
+          }
+        })
+        .catch(err => {});
       },
+
       resetClientModal() {},
+
       handleClientOk(bvModalEvent) {
         bvModalEvent.preventDefault();
         this.handleSubmit();
       },
+
       async loadClients() {
-        this.$parent.showSpinner();
         this.clients = await this.api.clients.read();
-        this.$parent.hideSpinner();
       },
+      
     },
 }
 </script>
@@ -184,11 +249,18 @@ export default {
   text-align: right;
 }
 .entity {
-  cursor: pointer;
-  background-color: transparent;
+  
   padding: 0 5px;
 }
-.entity:hover {
+.entity > span {
+  background-color: transparent;
+  cursor: pointer;
+  padding: 0 10px;
+}
+.entity > .selected {
+  background-color: #bcc5cd;
+}
+.entity > span:hover {
   background-color: #b8d9ec;
 }
 </style>

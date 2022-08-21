@@ -3,82 +3,113 @@ const apiPrefix = packageJson.apiPrefix;
 const apiURL = packageJson.server.protocol + '://' + packageJson.server.host + ':' + packageJson.server.port + apiPrefix;
 
 
+async function proxyFetch(url, opts, vm) {
+    const proxyAPI = (apiRes, vm) => {
+        let data;
+        if (apiRes.code !== 200) {
+          vm.$parent.$refs.alerts.add(`<strong>${apiRes.message || 'Нераспознанная ошибка'}</strong><br>Код ошибки: ${apiRes.code}<br>Запрошенный URL: ${apiRes.url}`);
+        }
+        else data = apiRes.data;
+        return data;
+    };
+    let code, data, message;
+    try {
+        vm.$parent.showSpinner();
+        const response = await fetch(url, opts);
+        const resObj = await response.json();
+        code = response.status;
+        data = resObj.data;
+        message = resObj.message;
+    }
+    catch (e) {
+        code = 504;
+        data = null;
+        message = 'Сервер API недоступен.';
+    }
+    finally {
+        vm.$parent.hideSpinner();
+    }
+    return proxyAPI({
+        code,
+        data,
+        message,
+        url
+    }, vm);
+}
+
+
+
 class Clients {
-    constructor(apiURL) {
+    constructor(apiURL, vm) {
+        this.vm = vm;
         this.apiURL = apiURL;
     }
+    async testError() {
+        return proxyFetch('http://bad.servername/nedostupen/', {method: 'GET'}, this.vm);
+    }
     async create({...body}) {
-        const response = await fetch(apiURL + 'clients', {
+        return proxyFetch(apiURL + 'clients', {
             method: 'POST',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async search({...body}) {
-        const response = await fetch(apiURL + 'clients/search', {
+        return proxyFetch(apiURL + 'clients/search', {
             method: 'POST',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async read() {
-        const response = await fetch(apiURL + 'clients', {method: 'GET'});
-        return (await response.json()).data;
+        return proxyFetch(apiURL + 'clients', {method: 'GET'}, this.vm);
     }
     async update({id, ...body}) {
-        const response = await fetch(apiURL + 'clients/' + id, {
+        return proxyFetch(apiURL + 'clients/' + id, {
             method: 'PUT',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async delete(id) {
-        const response = await fetch(apiURL + 'clients/' + id, {method: 'DELETE'});
-        return (await response.json()).data;
+        return proxyFetch(apiURL + 'clients/' + id, {method: 'DELETE'}, this.vm);
     }
 }
 
 
 class Pets {
-    constructor(apiURL) {
+    constructor(apiURL, vm) {
+        this.vm = vm;
         this.apiURL = apiURL;
     }
     async create({...body}) {
-        const response = await fetch(apiURL + 'pets', {
+        return proxyFetch(apiURL + 'pets', {
             method: 'POST',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async search({...body}) {
-        const response = await fetch(apiURL + 'pets/search', {
+        return proxyFetch(apiURL + 'pets/search', {
             method: 'POST',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async read() {
-        const response = await fetch(apiURL + 'pets', {method: 'GET'});
-        return (await response.json()).data;
+        return proxyFetch(apiURL + 'pets', {method: 'GET'}, this.vm);
     }
     async update({id, ...body}) {
-        const response = await fetch(apiURL + 'pets/' + id, {
+        return proxyFetch(apiURL + 'pets/' + id, {
             method: 'PUT',
             body: JSON.stringify(body)
-        });
-        return (await response.json()).data;
+        }, this.vm);
     }
     async delete(id) {
-        const response = await fetch(apiURL + 'pets/' + id, {method: 'DELETE'});
-        return (await response.json()).data;
+        return proxyFetch(apiURL + 'pets/' + id, {method: 'DELETE'}, this.vm);
     }
 }
 
 class Api {
-  constructor() {
+  constructor(vm) {
     this.apiURL = apiURL;
-    this.clients = new Clients(apiURL);
-    this.pets = new Pets(apiURL);
+    this.clients = new Clients(apiURL, vm);
+    this.pets = new Pets(apiURL, vm);
   }
 }
 

@@ -1,15 +1,21 @@
 import Vue from 'vue';
-import { BootstrapVue, TablePlugin, ButtonPlugin, ModalPlugin, NavPlugin } from 'bootstrap-vue';
+import {
+  BootstrapVue,
+  ButtonPlugin,
+  ModalPlugin,
+  NavPlugin,
+  TablePlugin,
+} from 'bootstrap-vue';
 import App from './App.vue';
 
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap-vue/dist/bootstrap-vue.css';
 
 Vue.use(BootstrapVue);
-Vue.use(TablePlugin);
 Vue.use(ButtonPlugin);
 Vue.use(ModalPlugin);
 Vue.use(NavPlugin);
+Vue.use(TablePlugin);
 
 Vue.config.productionTip = false;
 
