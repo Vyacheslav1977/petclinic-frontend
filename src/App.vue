@@ -35,7 +35,15 @@ import Clients from '@/components/Clients.vue';
 import Pets from '@/components/Pets.vue';
 
 let spinnerStartTime;
+let siid;
 const spinnerDelayMs = 200; // если запрос выполнился быстрее, чем это время, то спиннер не появится
+
+// костыль
+function hideLostSpinner(vm) { // так как спиннер один на всех, то может возникать ситуация, когда спиннер не убрался (при нескольких одновременных запросах к серверу; запросы выполнились быстрее spinnerDelayMs)
+  if (spinnerStartTime < (Date.now() - 60*1000) && vm.spinnerVisibility === 'visible') { // прячем спиннер, если с момента вывода прошло более 60 секунд
+    vm.hideSpinner();
+  }
+}
 
 export default {
   name: 'App',
@@ -56,8 +64,11 @@ export default {
       spinnerVisibility: 'hidden',
     }
   },
-  created() {
-    window.vm = this;
+  mounted() {
+    siid = setInterval(() => hideLostSpinner(this), 5*1000);
+  },
+  beforeDestroy() {
+    clearInterval(siid);
   },
   methods: {
     async testError() {
