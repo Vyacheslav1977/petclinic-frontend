@@ -36,8 +36,10 @@ import Pets from '@/components/Pets.vue';
 
 let spinnerStartTime;
 let siid;
+let counterShowSpinner = 0;
 const spinnerDelayMs = 200; // если запрос выполнился быстрее, чем это время, то спиннер не появится
 
+// todo: возможно, после добавления counterShowSpinner потребность в костыле пропала (проверить! но пока оставим)
 // костыль
 function hideLostSpinner(vm) { // так как спиннер один на всех, то может возникать ситуация, когда спиннер не убрался (при нескольких одновременных запросах к серверу; запросы выполнились быстрее spinnerDelayMs)
   if (spinnerStartTime < (Date.now() - 60*1000) && vm.spinnerVisibility === 'visible') { // прячем спиннер, если с момента вывода прошло более 60 секунд
@@ -83,12 +85,14 @@ export default {
       this.petsIsActive = true;
     },
     showSpinner() {
+      counterShowSpinner++;
       spinnerStartTime = Date.now();
       setTimeout(() => {
-        if (spinnerStartTime < Date.now()) this.spinnerVisibility = 'visible';
+        if (spinnerStartTime < Date.now() && counterShowSpinner > 0) this.spinnerVisibility = 'visible';
       }, spinnerDelayMs); // выводим спиннер только, если запрос выполняется дольше spinnerDelayMs мс (не учитывается несколько параллельных запросов - для этого нужно отслеживать каждый спиннер по-отдельности)
     },
     hideSpinner() {
+      if (counterShowSpinner > 0) counterShowSpinner--;
       this.spinnerVisibility = 'hidden';
       spinnerStartTime = Date.now() + spinnerDelayMs;
     },
