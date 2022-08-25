@@ -138,7 +138,7 @@ export default {
           this.quickSearch();
           return;
         }
-        this.pets = await this.api.pets.read();
+        this.pets = (await this.api.pets.read()).data;
       },
 
       hidePetsWindow() {
@@ -174,10 +174,11 @@ export default {
         if (!this.checkFormValidity()) {
           return
         }
+        let res;
         if (this.id === null) {
-          const res = await this.api.pets.create({name: this.name});
-          if (res && res.id) {
-            this.$bvModal.msgBoxOk(`${res.name} (id: ${res.id})`, {
+          res = await this.api.pets.create({name: this.name});
+          if (res.data && res.data.id) {
+            this.$bvModal.msgBoxOk(`${res.data.name} (id: ${res.data.id})`, {
               title: 'Новый питомец создан',
               size: 'sm',
               buttonSize: 'sm',
@@ -189,18 +190,22 @@ export default {
           }
         }
         else {
-          await this.api.pets.update({id: this.id, name: this.name, client: this.client === null ? null : this.client.id});
-          this.$bvModal.msgBoxOk('Изменения сохранены', {
-            size: 'sm',
-            buttonSize: 'sm',
-            okVariant: 'success',
-            headerClass: 'p-2 border-bottom-0',
-            footerClass: 'p-2 border-top-0',
-            centered: true
-          });
+          res = await this.api.pets.update({id: this.id, name: this.name, client: this.client === null ? null : this.client.id});
+          if (res.statusCode === 200) {
+            this.$bvModal.msgBoxOk('Изменения сохранены', {
+              size: 'sm',
+              buttonSize: 'sm',
+              okVariant: 'success',
+              headerClass: 'p-2 border-bottom-0',
+              footerClass: 'p-2 border-top-0',
+              centered: true
+            });
+          }
         }
-        this.hidePetsWindow();
-        await this.loadPets();
+        if (res && res.statusCode === 200) {
+          this.hidePetsWindow();
+          await this.loadPets();
+        }
       },
 
       async deletePet() {
@@ -214,6 +219,7 @@ export default {
         })
         .then(async (value) => {
           if (value) {
+            // todo: проверка на статус ответа и вывод соотв-щего уведомления: удачно/не_удачно
             await this.api.pets.delete(this.id);
             this.hidePetsWindow();
             await this.loadPets();
@@ -230,9 +236,9 @@ export default {
       },
 
       async loadClients() {
-        this.clients = await this.api.clients.read();
+        this.clients = (await this.api.clients.read()).data;
       },
-      
+
     },
 }
 </script>

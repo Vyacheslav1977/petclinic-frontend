@@ -10,7 +10,7 @@ async function proxyFetch(url, opts, vm) {
           vm.$parent.$refs.alerts.add(`<strong>${apiRes.message || 'Нераспознанная ошибка'}</strong><br>Код ошибки: ${apiRes.code}<br>Запрошенный URL: ${apiRes.url}`);
         }
         else data = apiRes.data;
-        return data;
+        return {data, statusCode: apiRes.code};
     };
     let code, data, message;
     try {
